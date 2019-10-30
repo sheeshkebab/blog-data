@@ -1,18 +1,21 @@
-# Installation
+# Vault Installation
 
-```$ export VAULT_VERSION=1.2.3 # latest at the time of writing
+```
+$ export VAULT_VERSION=1.2.3 # latest at the time of writing
 $ curl -LO https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
 $ unzip -q vault_${VAULT_VERSION}_linux_amd64.zip
 $ sudo cp vault /usr/local/bin/
 ```
 
-#### There’s not a lot that we need to do with Vault’s configuration file. Many of the important configuration items are stored in the encrypted backend.
+There’s not a lot that we need to do with Vault’s configuration file.
+Many of the important configuration items are stored in the encrypted backend.
 
-#### Let’s add a minimal (i.e. non-production) configuration:
-#### Note that i am turning off ssl on the vault server. I ended up using the EC2 load balancing service
-#### to serve my vault out over ssl.
+Let’s add a minimal (i.e. non-production) configuration:
+Note that i am turning off ssl on the vault server. I ended up using the EC2 load balancing service
+to serve my vault out over ssl.
 
-```$ mkdir hvault # where Vault will store all the encrypted bits
+```
+$ mkdir hvault # where Vault will store all the encrypted bits
 $ cat > /etc/vault.d/vault.hcl <<EOF
 storage "file" {
   path    = "/tmp/vault"
