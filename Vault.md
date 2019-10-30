@@ -15,7 +15,7 @@ Note that i am turning off ssl on the vault server. I ended up using the EC2 loa
 to serve my vault out over ssl.
 
 ```
-$ mkdir hvault # where Vault will store all the encrypted bits
+$ mkdir /etc/vault.d
 $ cat > /etc/vault.d/vault.hcl <<EOF
 storage "file" {
   path    = "/tmp/vault"
@@ -28,17 +28,18 @@ ui = true
 EOF
 ```
 
-### Start the vault server
+Start the vault server
 ```$ vault server -config=/etc/vault.d/vault.hcl```
 
-### Initialization
+#### Initialization
 
-### Once Vault is up and running, it must be initialized and unsealed. 
-### Since Vault is running in the foreground, we’ll need to jump over to another terminal window.
-```$ export VAULT_ADDR="http://127.0.0.1:8200"
+Once Vault is up and running, it must be initialized and unsealed. 
+Since Vault is running in the foreground, we’ll need to jump over to another terminal window.
+```
+$ export VAULT_ADDR="http://127.0.0.1:8200"
 $ echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> ~/.bashrc
 ```
-### Now, we should be able to get the status of the server:
+Now, we should be able to get the status of the server:
 ```$ vault status
 Error checking seal status: Error making API request. URL: GET http://127.0.0.1:8200/v1/sys/seal-status
 Code: 400. Errors:
@@ -46,7 +47,8 @@ Code: 400. Errors:
 * server is not yet initialized
 ```
 
-### Next, we initialize Vault:
+Next, we initialize Vault:
+```
 $ vault operator init -key-shares=1 -key-threshold=1
 Unseal Key 1: ySEWQMzGk3l6p+u2xkpjxL+BLGIz8/vauk8NmgvmCx0=
 
@@ -62,8 +64,10 @@ reconstruct the master key, Vault will remain permanently sealed!
 
 It is possible to generate new unseal keys, provided you have a quorum of
 existing unseal keys shares. See "vault rekey" for more information.
+```
 
 # Unseal
+```
 $ vault operator unseal
 Unseal Key (will be hidden):
 Key             Value
@@ -76,41 +80,51 @@ Version         0.10.1
 Cluster Name    vault-cluster-0241c38f
 Cluster ID      5b9ab5c2-fd50-46d8-c016-3411c04570bc
 HA Enabled      false
+```
 
-# Auditing - enable syslog for credential requests
+Auditing - enable syslog for credential requests
+```
 $ vault audit enable syslog
 Success! Enabled the syslog audit device at: syslog/
+```
 
-# SSH engine
+SSH engine
+```
 $ vault secrets enable -path=ssh-client ssh
 Success! Enabled the ssh secrets engine at: ssh-client/
+```
 
-# Configure certificate authority
-# redirect stdout to a file because we will ultimately need this on all client systems for verification
+Configure certificate authority
+redirect stdout to a file because we will ultimately need this on all client systems for verification
 
+```
 vault write \
    -field=public_key \
    ssh/config/ca \
    generate_signing_key=true | sudo tee /etc/ssh/trusted-user-ca-keys.pem
+```
 
+We can then configure the ssh daemon on client machines to to use our new CA certificate
 
-# We can then configure the ssh daemon on client machines to to use our new CA certificate
-
+```
 $ echo "TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem" | sudo tee -a /etc/ssh/sshd_config
 $ sudo sshd -t # test config just to be safe - no output means all is ok
 $ sudo systemctl reload sshd
+```
 
-# lets add a user for later
+lets add a user for later
+```
 $ sudo useradd richard
+```
 
-### Roles
+#### Add Roles to vault
 
-# Roles in Vault are created by writing data to special paths.
-# Roles provide a fine-grained interface for constraining the details that go into a signed client certificate.
-# For example, one could have a role that allows SSH access as the root user to non-prod IP ranges and another 
-# role to SSH as root to production.
-# lets create a role
-
+Roles in Vault are created by writing data to special paths.
+Roles provide a fine-grained interface for constraining the details that go into a signed client certificate.
+For example, one could have a role that allows SSH access as the root user to non-prod IP ranges and another 
+role to SSH as root to production.
+lets create a role
+```
 $ cat > regular-user-role.hcl <<EOF
 {
     "allow_user_certificates": true,
@@ -128,7 +142,7 @@ $ cat > regular-user-role.hcl <<EOF
     "key_id_format": "{{token_display_name}}"
 }
 EOF
-
+```
 
 # Now we write the role to vault
 $ cat regular-user-role.hcl | vault write ssh/roles/regular -
