@@ -1,20 +1,19 @@
-### Installation
+# Installation
 
-$ export VAULT_VERSION=1.2.3 # latest at the time of writing
+```$ export VAULT_VERSION=1.2.3 # latest at the time of writing
 $ curl -LO https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
-
 $ unzip -q vault_${VAULT_VERSION}_linux_amd64.zip
 $ sudo cp vault /usr/local/bin/
+```
+## Configuration
 
-# Configuration
+### There’s not a lot that we need to do with Vault’s configuration file. Many of the important configuration items are stored in the encrypted backend.
 
-# There’s not a lot that we need to do with Vault’s configuration file. Many of the important configuration items are stored in the encrypted backend.
+### Let’s add a minimal (i.e. non-production) configuration:
+### Note that i am turning off ssl on the vault server. I ended up using the EC2 load balancing service
+### to serve my vault out over ssl.
 
-# Let’s add a minimal (i.e. non-production) configuration:
-# Note that i am turning off ssl on the vault server. I ended up using the EC2 load balancing service
-# to serve my vault out over ssl.
-
-$ mkdir hvault # where Vault will store all the encrypted bits
+```$ mkdir hvault # where Vault will store all the encrypted bits
 $ cat > /etc/vault.d/vault.hcl <<EOF
 storage "file" {
   path    = "/tmp/vault"
@@ -25,26 +24,27 @@ listener "tcp" {
 }
 ui = true
 EOF
+```
 
-
-# Start the vault server
-$ vault server -config=/etc/vault.d/vault.hcl
+### Start the vault server
+```$ vault server -config=/etc/vault.d/vault.hcl```
 
 ### Initialization
 
-# Once Vault is up and running, it must be initialized and unsealed. 
-# Since Vault is running in the foreground, we’ll need to jump over to another terminal window.
-$ export VAULT_ADDR="http://127.0.0.1:8200"
+### Once Vault is up and running, it must be initialized and unsealed. 
+### Since Vault is running in the foreground, we’ll need to jump over to another terminal window.
+```$ export VAULT_ADDR="http://127.0.0.1:8200"
 $ echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> ~/.bashrc
-
-# Now, we should be able to get the status of the server:
-$ vault status
+```
+### Now, we should be able to get the status of the server:
+```$ vault status
 Error checking seal status: Error making API request. URL: GET http://127.0.0.1:8200/v1/sys/seal-status
 Code: 400. Errors:
 
 * server is not yet initialized
+```
 
-# Next, we initialize Vault:
+### Next, we initialize Vault:
 $ vault operator init -key-shares=1 -key-threshold=1
 Unseal Key 1: ySEWQMzGk3l6p+u2xkpjxL+BLGIz8/vauk8NmgvmCx0=
 
