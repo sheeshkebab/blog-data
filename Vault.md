@@ -5,7 +5,6 @@ $ curl -LO https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_V
 $ unzip -q vault_${VAULT_VERSION}_linux_amd64.zip
 $ sudo cp vault /usr/local/bin/
 ```
-## Configuration
 
 ### There’s not a lot that we need to do with Vault’s configuration file. Many of the important configuration items are stored in the encrypted backend.
 
