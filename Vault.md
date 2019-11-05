@@ -67,7 +67,6 @@ existing unseal keys shares. See "vault rekey" for more information.
 ```
 
 ## Unseal the vault
-# decrypt it and make ready
 ```
 $ vault operator unseal
 Unseal Key (will be hidden):
@@ -83,15 +82,13 @@ Cluster ID      5b9ab5c2-fd50-46d8-c016-3411c04570bc
 HA Enabled      false
 ```
 
-## Auditing
-# enable syslogging for credential requests
+## Auditing - enable syslogging for credential requests
 ```
 $ vault audit enable syslog
 Success! Enabled the syslog audit device at: syslog/
 ```
 
-## SSH engine
-# enable the ssh secrets engine inside vault on /ssh path
+## SSH engine - enable the ssh secrets engine inside vault on /ssh path
 ```
 $ vault secrets enable -path=ssh-client ssh
 Success! Enabled the ssh secrets engine at: ssh-client/
@@ -127,7 +124,7 @@ Roles in Vault are created by writing data to special paths.
 Roles provide a fine-grained interface for constraining the details that go into a signed client certificate.
 For example, one could have a role that allows SSH access as the root user to non-prod IP ranges and another role to SSH as root to production.
 
-#Create the role
+## Create the role
 ```
 $ cat > regular-user-role.hcl <<EOF
 {
@@ -148,7 +145,7 @@ $ cat > regular-user-role.hcl <<EOF
 EOF
 ```
 
-# Now we write the role to vault
+## Now we write the role to vault
 ```
 $ cat regular-user-role.hcl | vault write ssh/roles/regular -
 Success! Data written to: ssh-client/roles/regular
@@ -166,7 +163,7 @@ path "ssh/sign/regular" {
 EOF
 ```
 
-# create the policy
+## create the policy
 ```vault policy write ssh-regular-user regular-user-role-policy.hcl```
 
 ## Client Workflow
@@ -177,7 +174,7 @@ we’ll need a users. We start by enabling the userpass authentication method:
 $ vault auth enable -path=plain userpass
 $ vault write auth/plain/users/richard password="foobar" policies="ssh-regular-user"
 ```
-# Now, we’re ready to test the client-side workflow.
+## Now, we’re ready to test the client-side workflow.
 ```
 $ ssh-keygen -qf $HOME/.ssh/id_rsa -t rsa -N ""
 
@@ -199,7 +196,7 @@ $ vault write \
 $ ssh-keygen -Lf $HOME/.ssh/cert-signed.pub
 ```
 
-# make vault a service
+## make vault a service
 vi /etc/systemd/system/vault.service
 
 
