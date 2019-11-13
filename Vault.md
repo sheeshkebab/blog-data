@@ -1,5 +1,7 @@
 # Vault Installation
 
+### Download, Unpack and copy the binary into place.
+
 ```
 $ export VAULT_VERSION=1.2.3 # latest at the time of writing
 $ curl -LO https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip
@@ -29,9 +31,10 @@ EOF
 ```
 
 Start the vault server
+
 ```$ vault server -config=/etc/vault.d/vault.hcl```
 
-#### Initialization
+### Initialization
 
 Once Vault is up and running, it must be initialized and unsealed. 
 Since Vault is running in the foreground, we’ll need to jump over to another terminal window.
@@ -50,6 +53,7 @@ Code: 400. Errors:
 ```
 
 Next, we initialize Vault:
+
 ```
 $ vault operator init -key-shares=1 -key-threshold=1
 Unseal Key 1: ySEWQMzGk3l6p+u2xkpjxL+BLGIz8/vauk8NmgvmCx0=
@@ -89,20 +93,21 @@ Cluster ID      5b9ab5c2-fd50-46d8-c016-3411c04570bc
 HA Enabled      false
 ```
 
-Auditing - enable syslog for credential requests
+## Auditing - enable syslogging for credential requests
 ```
 $ vault audit enable syslog
 Success! Enabled the syslog audit device at: syslog/
 ```
 
-SSH engine
+## SSH engine - enable the ssh secrets engine inside vault on /ssh-client path
 ```
 $ vault secrets enable -path=ssh-client ssh
 Success! Enabled the ssh secrets engine at: ssh-client/
 ```
 
-Configure certificate authority
-redirect stdout to a file because we will ultimately need this on all client systems for verification
+## Configure certificate authority
+
+We redirect stdout to a file because we will ultimately need the generated certificate on all client systems for verification
 
 ```
 vault write \
@@ -119,18 +124,18 @@ $ sudo sshd -t # test config just to be safe - no output means all is ok
 $ sudo systemctl reload sshd
 ```
 
-lets add a user for later
+Now, lets add a user to the system for later testing, this user may already exist locally or in a directory. Im using richard locally for now.
 ```
 $ sudo useradd richard
 ```
 
-#### Add Roles to vault
+## Add Roles to vault
 
 Roles in Vault are created by writing data to special paths.
 Roles provide a fine-grained interface for constraining the details that go into a signed client certificate.
-For example, one could have a role that allows SSH access as the root user to non-prod IP ranges and another 
-role to SSH as root to production.
-lets create a role
+For example, one could have a role that allows SSH access as the root user to non-prod IP ranges and another role to SSH as root to production.
+
+### Create the role
 ```
 $ cat > regular-user-role.hcl <<EOF
 {
@@ -152,36 +157,39 @@ EOF
 ```
 
 # Now we write the role to vault
+```
 $ cat regular-user-role.hcl | vault write ssh-client/roles/regular -
 Success! Data written to: ssh-client/roles/regular
+```
 
+## Policies
 
-### Policies
+Policies allow us to define which users can request certificates from (i.e. write data to) which paths. Generally paths determine the level of access but we are keeping it basic for this demo.
 
-# Policies allow us to define which users can request certificates from (i.e. write data to) which paths. 
-# Generally paths determine the level of access but we are keeping it basic for this demo.
-
+```
 $ cat > regular-user-role-policy.hcl <<EOF
 path "ssh-client/sign/regular" {
     capabilities = ["create","update"]
 }
 EOF
+```
 
-# create the policy
-vault policy write ssh-regular-user regular-user-role-policy.hcl
+### create the policy
+```vault policy write ssh-regular-user regular-user-role-policy.hcl```
 
-### Client Workflow
+## Client Workflow
 
-# In order to test the client workflow for the regular user path,
-# we’ll need a users. We start by enabling the userpass authentication method:
-
+In order to test the client workflow for the regular user path,
+we’ll need a users. We start by enabling the userpass authentication method:
+```
 $ vault auth enable -path=plain userpass
 $ vault write auth/plain/users/richard password="foobar" policies="ssh-regular-user"
-
-# Now, we’re ready to test the client-side workflow.
-
+```
+### Now, we’re ready to test the client-side workflow.
+```
 $ export VAULT_ADDR="http://127.0.0.1:8200"
 $ ssh-keygen -qf $HOME/.ssh/id_rsa -t rsa -N ""
+
 $ vault login \
     -path=plain \
     -method=userpass \
@@ -196,17 +204,13 @@ $ vault write \
     > $HOME/.ssh/cert-signed.pub
 
 $ ssh-keygen -Lf $HOME/.ssh/cert-signed.pub
-
+```
 
 # make vault a service
-```
 vi /etc/systemd/system/vault.service
-```
 
-add this content
 
 ```
-# /etc/systemd/system/vault.service
 [Unit]
 Description="HashiCorp Vault - A tool for managing secrets"
 Documentation=https://www.vaultproject.io/docs/
@@ -244,7 +248,6 @@ LimitMEMLOCK=infinity
 [Install]
 WantedBy=multi-user.target
 ```
-
 
 # Start Vault
 ```
