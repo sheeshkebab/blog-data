@@ -38,9 +38,11 @@ Since Vault is running in the foreground, we’ll need to jump over to another t
 ```
 $ export VAULT_ADDR="http://127.0.0.1:8200"
 $ echo 'export VAULT_ADDR="http://127.0.0.1:8200"' >> ~/.bashrc
+$ export PATH=$PATH:/usr/local/bin
 ```
 Now, we should be able to get the status of the server:
-```$ vault status
+```
+$ vault status
 Error checking seal status: Error making API request. URL: GET http://127.0.0.1:8200/v1/sys/seal-status
 Code: 400. Errors:
 
@@ -67,7 +69,12 @@ existing unseal keys shares. See "vault rekey" for more information.
 ```
 
 # Unseal
+
+Here you will need to login first using the token output during the unseal operation above.
+Then, you will need to enter the unseal key to validate the unseal operation.
+
 ```
+$ vault login
 $ vault operator unseal
 Unseal Key (will be hidden):
 Key             Value
@@ -100,7 +107,7 @@ redirect stdout to a file because we will ultimately need this on all client sys
 ```
 vault write \
    -field=public_key \
-   ssh/config/ca \
+   ssh-client/config/ca \
    generate_signing_key=true | sudo tee /etc/ssh/trusted-user-ca-keys.pem
 ```
 
@@ -145,7 +152,7 @@ EOF
 ```
 
 # Now we write the role to vault
-$ cat regular-user-role.hcl | vault write ssh/roles/regular -
+$ cat regular-user-role.hcl | vault write ssh-client/roles/regular -
 Success! Data written to: ssh-client/roles/regular
 
 
@@ -155,7 +162,7 @@ Success! Data written to: ssh-client/roles/regular
 # Generally paths determine the level of access but we are keeping it basic for this demo.
 
 $ cat > regular-user-role-policy.hcl <<EOF
-path "ssh/sign/regular" {
+path "ssh-client/sign/regular" {
     capabilities = ["create","update"]
 }
 EOF
@@ -173,6 +180,7 @@ $ vault write auth/plain/users/richard password="foobar" policies="ssh-regular-u
 
 # Now, we’re ready to test the client-side workflow.
 
+$ export VAULT_ADDR="http://127.0.0.1:8200"
 $ ssh-keygen -qf $HOME/.ssh/id_rsa -t rsa -N ""
 $ vault login \
     -path=plain \
@@ -180,10 +188,9 @@ $ vault login \
     username=richard \
     password=foobar
 
-$ export VAULT_ADDR="http://127.0.0.1:8200"
 $ vault write \
     -field=signed_key \
-    ssh/sign/regular \
+    ssh-client/sign/regular \
     valid_principals="richard" \
     public_key=@$HOME/.ssh/id_rsa.pub \
     > $HOME/.ssh/cert-signed.pub
@@ -192,4 +199,57 @@ $ ssh-keygen -Lf $HOME/.ssh/cert-signed.pub
 
 
 # make vault a service
+```
 vi /etc/systemd/system/vault.service
+```
+
+add this content
+
+```
+# /etc/systemd/system/vault.service
+[Unit]
+Description="HashiCorp Vault - A tool for managing secrets"
+Documentation=https://www.vaultproject.io/docs/
+Requires=network-online.target
+After=network-online.target
+ConditionFileNotEmpty=/etc/vault.d/vault.hcl
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+User=vault
+Group=vault
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+SecureBits=keep-caps
+AmbientCapabilities=CAP_IPC_LOCK
+Capabilities=CAP_IPC_LOCK+ep
+CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+NoNewPrivileges=yes
+ExecStart=/usr/local/bin/vault server -config=/etc/vault.d/vault.hcl
+ExecReload=/bin/kill --signal HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+StartLimitInterval=60
+StartLimitIntervalSec=60
+StartLimitBurst=3
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target
+```
+
+
+# Start Vault
+```
+sudo systemctl enable vault
+sudo systemctl start vault
+sudo systemctl status vault
+```
+
