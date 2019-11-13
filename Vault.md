@@ -256,3 +256,6 @@ sudo systemctl start vault
 sudo systemctl status vault
 ```
 
+you are now ready to start consuming the vault from Tower.
+
+
