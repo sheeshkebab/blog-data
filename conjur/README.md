@@ -19,7 +19,7 @@ yum update
 
 3. Install podman on `conjur` server
 ```
-yum -y install podman
+yum -y install python3 git podman
 ```
 
 4. Install `podman-compose` & `jq` on `conjur` server 
@@ -139,7 +139,7 @@ Run these commands to download and setup Conjur OSS. Make sure you run the comma
 git clone https://github.com/cyberark/conjur-quickstart.git
 cd conjur-quickstart
 podman-compose pull
-podman-compose run --no-deps --rm conjur data-key generate > data_key
+podman-compose run --no-deps --rm conjur data-key generate | tail -1 > data_key
 export CONJUR_DATA_KEY="$(< data_key)"
 podman-compose up -d
 podman ps -a
